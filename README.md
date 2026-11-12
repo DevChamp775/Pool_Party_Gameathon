@@ -7,6 +7,7 @@ A real-time multiplayer strategy game based on the Public Goods Game, where team
 📌 Overview
 
 Gameplay Link: https://interactive-game-dev-ts46.bolt.host
+https://poolpartydonatetowin.vercel.app/
 
 POOL PARTY is a browser-based, multiplayer team strategy game designed to demonstrate cooperation, competition, decision-making, and game theory in an interactive environment.
 
