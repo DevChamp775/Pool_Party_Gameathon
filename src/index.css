@@ -70,6 +70,11 @@
 .lobby-copy p .lobby-code{font-size:16px}
 .lobby-code{font-family:'DM Mono';color:var(--yellow);background:rgba(255,212,0,.12);padding:2px 8px;letter-spacing:.14em}
 .host-actions{display:flex;gap:12px;flex-wrap:wrap}
+.qr-block{display:flex;gap:16px;align-items:center;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.qr-code{padding:10px;background:#0a2a29;border:1px solid var(--cyan);flex:none}
+.qr-caption{display:flex;flex-direction:column;gap:6px}
+.qr-caption span{font:10px 'DM Mono';letter-spacing:.14em;color:var(--cyan)}
+.qr-caption b{font:20px 'DM Mono';color:var(--yellow);letter-spacing:.14em}
 .lobby-roster{border:1px solid var(--line);background:rgba(9,40,39,.6);padding:22px;display:flex;flex-direction:column;gap:4px}
 .bot-remove{border:1px solid var(--line);background:none;color:var(--muted);width:22px;height:22px;display:grid;place-items:center;padding:0;flex:none;margin-left:8px}
 .bot-remove:hover{border-color:var(--red);color:var(--red)}

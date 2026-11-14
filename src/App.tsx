@@ -7,7 +7,7 @@ import PlayerApp from '@/player/PlayerApp';
 type Role = 'pick' | 'admin' | 'player';
 
 function App() {
-  const [role, setRole] = useState<Role>('pick');
+  const [role, setRole] = useState<Role>(() => (window.location.hash.startsWith('#/join/') ? 'player' : 'pick'));
 
   if (role === 'admin') return <AdminApp onExit={() => setRole('pick')} />;
   if (role === 'player') return <PlayerApp onExit={() => setRole('pick')} />;

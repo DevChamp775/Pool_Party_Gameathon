@@ -132,14 +132,14 @@ export function subscribeToRoom(sessionId: string, onUpdate: (session: Session) 
   return () => { void client.removeChannel(channel); };
 }
 
-export function loadSaved(key: string): Session | null {
+export function loadSaved<T>(key: string): T | null {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as Session) : null;
+    return raw ? (JSON.parse(raw) as T) : null;
   } catch {
     localStorage.removeItem(key);
     return null;
   }
 }
 
-export const storeLocal = (key: string, session: Session) => localStorage.setItem(key, JSON.stringify(session));
+export const storeLocal = <T,>(key: string, value: T) => localStorage.setItem(key, JSON.stringify(value));

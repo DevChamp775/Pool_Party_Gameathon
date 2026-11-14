@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { PixelBackground, RevealCard, RoundResultsCard, FinalResults, Toast, useToast } from '@/components/shared';
 import {
-  findRoom, loadSaved, makeTeam, PLAYER_KEY, Phase, ROUND_SECONDS, saveRoom, Session,
+  findRoom, loadSaved, makeTeam, PLAYER_KEY, ROUND_SECONDS, saveRoom, Session,
   storeLocal, subscribeToRoom, submitContribution, Team,
 } from '@/lib/game';
 
@@ -25,7 +25,15 @@ export default function PlayerApp({ onExit }: { onExit: () => void }) {
   const { message, showToast } = useToast();
 
   useEffect(() => {
-    const saved = loadSaved(PLAYER_KEY);
+    const scanned = window.location.hash.match(/^#\/join\/([A-Z0-9]{4,6})$/i);
+    if (scanned) {
+      setRoomCode(scanned[1].toUpperCase());
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    const saved = loadSaved<SavedPlayer>(PLAYER_KEY);
     if (saved && typeof saved.teamId === 'number' && saved.session) {
       setSession(saved.session); setTeamId(saved.teamId);
       setScreen(saved.session.phase === 'lobby' ? 'lobby' : 'game');
@@ -38,7 +46,7 @@ export default function PlayerApp({ onExit }: { onExit: () => void }) {
       setSession((current) => {
         if (!current) return remote;
         const next = { ...remote, id: current.id };
-        storeLocal(PLAYER_KEY, { teamId, session: next } as SavedPlayer);
+        if (teamId !== null) storeLocal<SavedPlayer>(PLAYER_KEY, { teamId, session: next });
         return next;
       });
     });
@@ -62,7 +70,7 @@ export default function PlayerApp({ onExit }: { onExit: () => void }) {
     const player: Team = makeTeam(id, name, found.state.initialTokens);
     const joined: Session = { ...found.state, id: found.id, teams: [...found.state.teams, player] };
     if (joined.id) void saveRoom(joined);
-    storeLocal(PLAYER_KEY, { teamId: id, session: joined } as SavedPlayer);
+    storeLocal<SavedPlayer>(PLAYER_KEY, { teamId: id, session: joined });
     setSession(joined); setTeamId(id); setScreen('lobby');
     setBusy(false);
     showToast(`Joined ${name} in room ${code}`);
@@ -81,14 +89,12 @@ export default function PlayerApp({ onExit }: { onExit: () => void }) {
 
   const leave = () => { localStorage.removeItem(PLAYER_KEY); setSession(null); setTeamId(null); setScreen('join'); };
 
-  if (screen === 'join') return <JoinGate teamName={teamName} setTeamName={setTeamName} roomCode={roomCode} setRoomCode={setRoomCode} error={joinError} busy={busy} onJoin={join} onBack={onExit} />;
+  if (screen === 'join') return <JoinGate teamName={teamName} setTeamName={setTeamName} roomCode={roomCode} setRoomCode={setRoomCode} error={joinError} busy={busy} onJoin={join} onBack={onExit} autoFocusCode={!!window.location.hash.match(/#\/join\//)} />;
   if (!session || teamId === null) return <JoinGate teamName={teamName} setTeamName={setTeamName} roomCode={roomCode} setRoomCode={setRoomCode} error={joinError} busy={busy} onJoin={join} onBack={onExit} />;
   if (screen === 'final') return <FinalResults session={session} actionLabel="Leave the room" onAction={leave} />;
   if (screen === 'lobby' || session.phase === 'lobby') return <WaitingRoom session={session} teamId={teamId} onLeave={leave} />;
   return <PlayScreen session={session} teamId={teamId} contribution={contribution} setContribution={setContribution} onLock={lockIn} busy={busy} toast={message} onLeave={leave} />;
 }
-
-type SavedPlayer = { teamId: number; session: Session };
 
 function WaitingRoom({ session, teamId, onLeave }: { session: Session; teamId: number; onLeave: () => void }) {
   const me = session.teams.find((team) => team.id === teamId);
@@ -108,8 +114,8 @@ function ContributionCard({ balance, value, setValue, percent, onLock, locked, b
   return <div className="contribution-card"><div className="contribution-copy"><span className="section-label">YOUR SECRET DECISION</span><h2>How much will you put<br />into the pool?</h2><p>Once locked, your choice cannot be changed. The room only sees your decision after the admin closes the round.</p></div><div className="contribution-control"><div className="number-input"><input type="number" min="0" max={balance} value={value} onChange={(event) => setValue(Math.max(0, Math.min(balance, Number(event.target.value) || 0)))} /><span>TOKENS</span></div><input className="contribution-slider" type="range" min="0" max={balance} value={value} onChange={(event) => setValue(Number(event.target.value))} /><div className="quick-picks"><button onClick={() => setValue(0)}>0</button><button onClick={() => setValue(Math.floor(balance * .25))}>25%</button><button onClick={() => setValue(Math.floor(balance * .5))}>50%</button><button onClick={() => setValue(balance)}>ALL IN</button></div><div className="contribution-hint"><span>{percent}% of your wallet</span><span>MAX {balance}</span></div><button className="button button-primary lock-button" onClick={onLock} disabled={locked || busy}>{locked ? <><Check size={18} /> Decision locked</> : <><LockKeyhole size={18} /> Lock {value} tokens</>}</button></div></div>;
 }
 
-function JoinGate({ teamName, setTeamName, roomCode, setRoomCode, error, busy, onJoin, onBack }: { teamName: string; setTeamName: (value: string) => void; roomCode: string; setRoomCode: (value: string) => void; error: string; busy: boolean; onJoin: () => void; onBack: () => void }) {
+function JoinGate({ teamName, setTeamName, roomCode, setRoomCode, error, busy, onJoin, onBack, autoFocusCode }: { teamName: string; setTeamName: (value: string) => void; roomCode: string; setRoomCode: (value: string) => void; error: string; busy: boolean; onJoin: () => void; onBack: () => void; autoFocusCode?: boolean }) {
   const valid = teamName.trim().length >= 2 && roomCode.trim().length >= 4;
   const submit = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); if (valid) onJoin(); };
-  return <main className="app-shell registration-shell"><PixelBackground /><nav className="topbar"><button className="back-button" onClick={onBack}><ChevronLeft size={18} /> Switch role</button><div className="setup-step">PLAYER ENTRANCE</div></nav><section className="registration-wrap"><div className="registration-card"><div className="registration-icon"><Users size={30} /></div><div className="eyebrow">WELCOME TO THE ARENA</div><h1>Join<br /><em>the room.</em></h1><p>Enter the room code from your admin, pick a team name, and wait in the lobby. The admin starts every round.</p><form onSubmit={submit}><label htmlFor="team-name">TEAM NAME</label><input id="team-name" autoFocus value={teamName} onChange={(event) => setTeamName(event.target.value.slice(0, 24))} placeholder="Enter your team name" maxLength={24} /><label htmlFor="room-code">ROOM CODE</label><input id="room-code" className="room-code-input" value={roomCode} onChange={(event) => setRoomCode(event.target.value.toUpperCase().slice(0, 6))} placeholder="Example: A1B2C3" maxLength={6} /><div className="registration-meta"><span>{teamName.length}/24 characters</span><span><Coins size={14} /> Tokens come from the admin's room</span></div><button className="button button-primary registration-button" type="submit" disabled={!valid || busy}><Play size={18} fill="currentColor" /> Join and wait <ArrowRight size={18} /></button></form>{error && <div className="form-error">{error}</div>}</div></section></main>;
+  return <main className="app-shell registration-shell"><PixelBackground /><nav className="topbar"><button className="back-button" onClick={onBack}><ChevronLeft size={18} /> Switch role</button><div className="setup-step">PLAYER ENTRANCE</div></nav><section className="registration-wrap"><div className="registration-card"><div className="registration-icon"><Users size={30} /></div><div className="eyebrow">WELCOME TO THE ARENA</div><h1>Join<br /><em>the room.</em></h1><p>Enter the room code from your admin, pick a team name, and wait in the lobby. The admin starts every round.</p><form onSubmit={submit}><label htmlFor="team-name">TEAM NAME</label><input id="team-name" autoFocus={!autoFocusCode} value={teamName} onChange={(event) => setTeamName(event.target.value.slice(0, 24))} placeholder="Enter your team name" maxLength={24} /><label htmlFor="room-code">ROOM CODE</label><input id="room-code" className="room-code-input" autoFocus={autoFocusCode} value={roomCode} onChange={(event) => setRoomCode(event.target.value.toUpperCase().slice(0, 6))} placeholder="Example: A1B2C3" maxLength={6} /><div className="registration-meta"><span>{teamName.length}/24 characters</span><span><Coins size={14} /> Tokens come from the admin's room</span></div><button className="button button-primary registration-button" type="submit" disabled={!valid || busy}><Play size={18} fill="currentColor" /> Join and wait <ArrowRight size={18} /></button></form>{error && <div className="form-error">{error}</div>}</div></section></main>;
 }
